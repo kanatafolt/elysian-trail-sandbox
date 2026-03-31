@@ -1,2 +1,3 @@
-# elysian-trail-sandbox
-Sandbox for Vite + React + TypeScript
+# Elysian Trail Sandbox
+
+Vite + React + TypeScriptのサンドボックス環境。GitHub Pagesで公開テスト
