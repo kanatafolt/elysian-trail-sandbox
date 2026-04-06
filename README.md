@@ -1,4 +1,4 @@
-![Banner_ElysianTrail-prototype_wide.webp](src/assets/Banner_ElysianTrail-prototype_wide.webp)
+![Banner_ElysianTrail-prototype_SD-wide.webp](src/assets/Banner_ElysianTrail-prototype_SD-wide.webp)
 
 # Elysian Trail Sandbox
 
