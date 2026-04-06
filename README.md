@@ -1,3 +1,5 @@
+![Banner_ElysianTrail-prototype_wide.webp](src/assets/Banner_ElysianTrail-prototype_wide.webp)
+
 # Elysian Trail Sandbox
 
 Vite + React + TypeScriptのサンドボックス環境。GitHub Pagesで公開テスト
