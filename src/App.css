@@ -56,8 +56,7 @@
 
 .topbar__nav button:hover,
 .page-card:hover,
-.font-list button:hover,
-.font-switch:hover {
+.font-list button:hover {
   transform: translateY(-1px);
 }
 
@@ -151,26 +150,6 @@
   top: 24px;
 }
 
-.font-meta {
-  display: inline-grid;
-  gap: 4px;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--chip-bg);
-}
-
-.font-meta__label {
-  font-size: 12px;
-  color: var(--text-soft);
-}
-
-.font-meta__name {
-  font-size: 20px;
-  line-height: 1.2;
-  color: var(--text-h);
-}
-
 .font-filter {
   display: grid;
   gap: 12px;
@@ -180,31 +159,10 @@
   background: var(--chip-bg);
 }
 
-.font-filter__search {
-  display: grid;
-  gap: 8px;
-}
-
 .font-filter__label {
   font-size: 12px;
   font-weight: 700;
   color: var(--text-soft);
-}
-
-.font-filter__search input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  font: inherit;
-  color: var(--text-h);
-  background: var(--sample-bg);
-}
-
-.font-filter__search input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 .font-filter__chips {
@@ -257,12 +215,63 @@
   min-height: 250px;
 }
 
+.font-sample--custom {
+  grid-column: 1 / -1;
+}
+
 .font-sample__tag {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent);
+}
+
+.font-custom-preview__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.font-custom-preview__slider {
+  display: grid;
+  grid-template-columns: auto minmax(140px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 360px);
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.font-custom-preview__slider strong {
+  color: var(--text-h);
+}
+
+.font-custom-preview__slider input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.font-custom-preview__textarea {
+  width: 100%;
+  min-height: 180px;
+  box-sizing: border-box;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  resize: vertical;
+  color: var(--text-h);
+  background: var(--panel);
+  line-height: 1.6;
+}
+
+.font-custom-preview__textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .font-sample__main {
@@ -363,25 +372,7 @@
   cursor: pointer;
 }
 
-.font-switch {
-  appearance: none;
-  border: none;
-  border-radius: 999px;
-  padding: 14px 22px;
-  width: 100%;
-  font: inherit;
-  font-weight: 700;
-  color: #f7fbff;
-  background: linear-gradient(135deg, #2f6fed, #1546a6);
-  cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    opacity 0.2s ease;
-  box-shadow: 0 12px 24px rgba(21, 70, 166, 0.28);
-}
-
-.font-switch:focus-visible,
+.font-custom-preview__textarea:focus-visible,
 .font-list button:focus-visible,
 .topbar__nav button:focus-visible,
 .page-card:focus-visible,
@@ -390,38 +381,32 @@
   outline-offset: 2px;
 }
 
-.font-switch:active {
-  transform: translateY(1px);
-  opacity: 0.96;
-}
-
-.font-switch:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-  transform: none;
-  box-shadow: none;
-}
-
 .font-list {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.font-list li {
+  min-width: 0;
 }
 
 .font-list button {
   appearance: none;
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 18px;
   padding: 10px 14px;
   font: inherit;
   background: var(--chip-bg);
   color: var(--text-soft);
   font-size: 14px;
   text-align: left;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
   cursor: pointer;
   transition:
     border-color 0.2s ease,
@@ -437,6 +422,7 @@
 }
 
 .font-list__empty {
+  grid-column: 1 / -1;
   padding: 14px 16px;
   border: 1px dashed var(--border);
   border-radius: 16px;
@@ -481,6 +467,11 @@
 
   .font-sample {
     padding: 18px;
+  }
+
+  .font-custom-preview__slider {
+    grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .font-status-grid {

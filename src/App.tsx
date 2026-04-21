@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const fontCandidates = [
@@ -44,25 +44,128 @@ const pages = [
   },
 ] as const
 
+const defaultCustomPreviewText = `自由入力プレビュー
+ここに確認したい文言を自由に入力できます。
+タイトル、会話、長文説明などの見え方をまとめて試せます。`
+
+const defaultCustomPreviewFontSize = 28
+const customPreviewStorageKeys = {
+  text: 'elysian-trail-sandbox:custom-preview-text',
+  height: 'elysian-trail-sandbox:custom-preview-height',
+  fontName: 'elysian-trail-sandbox:selected-font-name',
+} as const
+
 type PageId = (typeof pages)[number]['id']
 type FilterId = (typeof filterOptions)[number]['id']
 
+const readStoredCustomPreviewText = () => {
+  if (typeof window === 'undefined') {
+    return defaultCustomPreviewText
+  }
+
+  try {
+    return (
+      window.localStorage.getItem(customPreviewStorageKeys.text) ??
+      defaultCustomPreviewText
+    )
+  } catch {
+    return defaultCustomPreviewText
+  }
+}
+
+const readStoredCustomPreviewHeight = () => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  try {
+    const storedHeight = window.localStorage.getItem(
+      customPreviewStorageKeys.height,
+    )
+    const parsedHeight = Number(storedHeight)
+
+    if (!storedHeight || !Number.isFinite(parsedHeight) || parsedHeight < 180) {
+      return null
+    }
+
+    return parsedHeight
+  } catch {
+    return null
+  }
+}
+
+const readStoredFontIndex = () => {
+  if (typeof window === 'undefined') {
+    return 0
+  }
+
+  try {
+    const storedFontName = window.localStorage.getItem(
+      customPreviewStorageKeys.fontName,
+    )
+
+    if (!storedFontName) {
+      return 0
+    }
+
+    const storedFontIndex = fontCandidates.findIndex(
+      (font) => font.name === storedFontName,
+    )
+
+    return storedFontIndex === -1 ? 0 : storedFontIndex
+  } catch {
+    return 0
+  }
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState<PageId>('title')
-  const [fontIndex, setFontIndex] = useState(0)
+  const [fontIndex, setFontIndex] = useState(readStoredFontIndex)
   const [fontFilter, setFontFilter] = useState<FilterId>('all')
-  const [searchText, setSearchText] = useState('')
-  const currentFont = fontCandidates[fontIndex]
-  const normalizedSearchText = searchText.trim().toLowerCase()
-  const filteredFonts = fontCandidates.filter((font) => {
-    const matchesFilter =
-      fontFilter === 'all' || font.category === fontFilter
-    const matchesSearch = font.name.toLowerCase().includes(normalizedSearchText)
+  const [customPreviewText, setCustomPreviewText] = useState(
+    readStoredCustomPreviewText,
+  )
+  const [customPreviewFontSize, setCustomPreviewFontSize] = useState(
+    defaultCustomPreviewFontSize,
+  )
+  const [customPreviewHeight, setCustomPreviewHeight] = useState<number | null>(
+    readStoredCustomPreviewHeight,
+  )
+  const customPreviewTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-    return matchesFilter && matchesSearch
-  })
+  const selectedFont = fontCandidates[fontIndex]
+  const filteredFonts = fontCandidates.filter(
+    (font) => fontFilter === 'all' || font.category === fontFilter,
+  )
+  const currentFont =
+    filteredFonts.find((font) => font.name === selectedFont.name) ??
+    filteredFonts[0] ??
+    selectedFont
+
   const sampleStyle = {
     fontFamily: `'${currentFont.name}', var(--font-fallback)`,
+  }
+
+  const customPreviewStyle = {
+    ...sampleStyle,
+    fontSize: `${customPreviewFontSize}px`,
+    ...(customPreviewHeight === null
+      ? {}
+      : { height: `${customPreviewHeight}px` }),
+  }
+
+  const syncCustomPreviewHeight = () => {
+    const target = customPreviewTextareaRef.current
+
+    if (!target) {
+      return
+    }
+
+    const nextHeight = Math.round(target.getBoundingClientRect().height)
+
+    setCustomPreviewHeight((currentHeight) =>
+      currentHeight === nextHeight ? currentHeight : nextHeight,
+    )
   }
 
   useEffect(() => {
@@ -73,33 +176,65 @@ function App() {
   }, [currentPage])
 
   useEffect(() => {
-    if (!filteredFonts.some((font) => font.name === currentFont.name)) {
-      const fallbackFont = filteredFonts[0]
-
-      if (!fallbackFont) {
-        return
-      }
-
-      setFontIndex(
-        fontCandidates.findIndex((font) => font.name === fallbackFont.name),
+    try {
+      window.localStorage.setItem(
+        customPreviewStorageKeys.text,
+        customPreviewText,
       )
+    } catch {
+      return
     }
-  }, [currentFont.name, filteredFonts])
+  }, [customPreviewText])
 
-  const handleNextFont = () => {
-    const currentFilteredIndex = filteredFonts.findIndex(
-      (font) => font.name === currentFont.name,
-    )
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        customPreviewStorageKeys.fontName,
+        selectedFont.name,
+      )
+    } catch {
+      return
+    }
+  }, [selectedFont.name])
 
-    if (filteredFonts.length === 0) {
+  useEffect(() => {
+    if (customPreviewHeight === null) {
       return
     }
 
-    const nextFont =
-      filteredFonts[(currentFilteredIndex + 1) % filteredFonts.length]
+    try {
+      window.localStorage.setItem(
+        customPreviewStorageKeys.height,
+        String(customPreviewHeight),
+      )
+    } catch {
+      return
+    }
+  }, [customPreviewHeight])
 
-    setFontIndex(fontCandidates.findIndex((font) => font.name === nextFont.name))
-  }
+  useEffect(() => {
+    const target = customPreviewTextareaRef.current
+
+    if (!target || typeof ResizeObserver === 'undefined') {
+      return
+    }
+
+    syncCustomPreviewHeight()
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+
+      if (!entry) {
+        return
+      }
+
+      syncCustomPreviewHeight()
+    })
+
+    observer.observe(target)
+
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <main className="app-shell">
@@ -110,6 +245,7 @@ function App() {
             {currentPage === 'title' ? 'タイトル' : 'フォントプレビュー'}
           </p>
         </div>
+
         <nav className="topbar__nav" aria-label="ページナビゲーション">
           {pages.map((page) => (
             <button
@@ -155,25 +291,64 @@ function App() {
               <p className="font-card__eyebrow">Google Fonts Preview</p>
               <h1>仕様候補フォント確認</h1>
               <p className="font-card__lead">
-                RPGのUI文言を使って、タイトル向けか会話向けかを見比べられます。
+                RPG の UI 文言を使って、タイトル向けと読みやすさの両方を比較できます。
               </p>
             </div>
 
             <div className="font-samples" style={sampleStyle}>
+              <section className="font-sample font-sample--custom">
+                <div className="font-custom-preview__header">
+                  <span className="font-sample__tag">Free Input Preview</span>
+
+                  <label className="font-custom-preview__slider">
+                    <span>フォントサイズ</span>
+                    <input
+                      type="range"
+                      min="16"
+                      max="72"
+                      step="1"
+                      value={customPreviewFontSize}
+                      onChange={(event) =>
+                        setCustomPreviewFontSize(Number(event.target.value))
+                      }
+                    />
+                    <strong>{customPreviewFontSize}px</strong>
+                  </label>
+                </div>
+
+                <textarea
+                  ref={customPreviewTextareaRef}
+                  className="font-custom-preview__textarea"
+                  value={customPreviewText}
+                  onChange={(event) => setCustomPreviewText(event.target.value)}
+                  onMouseUp={syncCustomPreviewHeight}
+                  onTouchEnd={syncCustomPreviewHeight}
+                  onBlur={syncCustomPreviewHeight}
+                  style={customPreviewStyle}
+                  aria-label="自由入力プレビュー"
+                />
+              </section>
+
               <section className="font-sample font-sample--title">
                 <span className="font-sample__tag">Title / Key Art</span>
                 <p className="font-sample__main">
                   Elysian Trail
                   <br />
-                  星霜を越えて、迷宮の奥へ。
+                  記憶を越えて、秘境の旅へ。
                 </p>
               </section>
 
               <section className="font-sample font-sample--battle">
                 <span className="font-sample__tag">Battle Log</span>
-                <p className="font-sample__log">アストラの攻撃。冥狼ヴァルガに斬撃。</p>
-                <p className="font-sample__log">クリティカルヒット。248のダメージ。</p>
-                <p className="font-sample__log">冥狼ヴァルガの防御力が低下した。</p>
+                <p className="font-sample__log">
+                  アストラの連撃。氷槍ヴァルガに命中。
+                </p>
+                <p className="font-sample__log">
+                  クリティカルヒット。248 のダメージ。
+                </p>
+                <p className="font-sample__log">
+                  氷槍ヴァルガの体勢が大きく崩れた。
+                </p>
                 <p className="font-sample__damage">-248</p>
               </section>
 
@@ -190,18 +365,20 @@ function App() {
               </section>
 
               <section className="font-sample font-sample--dialogue">
-                <span className="font-sample__tag">Character Name / Dialogue</span>
+                <span className="font-sample__tag">
+                  Character Name / Dialogue
+                </span>
                 <p className="font-sample__name">セレス</p>
                 <p className="font-sample__dialogue">
-                  「急ぎましょう。夜が明ける前に、封印の間へ辿り着かないと」
+                  「急ぎましょう。夜が明ける前に、星海の門へ辿り着かないと」
                 </p>
               </section>
 
               <section className="font-sample font-sample--skill">
                 <span className="font-sample__tag">Skill Name / Effect</span>
-                <p className="font-sample__skill-name">星天断ち</p>
+                <p className="font-sample__skill-name">星霜断ち</p>
                 <p className="font-sample__sub">
-                  光属性の斬撃で敵単体を攻撃。ブレイク中は威力が30%上昇。
+                  敵単体に斬撃属性ダメージ。ブレイク中は威力が 150% に上昇。
                 </p>
               </section>
 
@@ -219,9 +396,9 @@ function App() {
                 <div className="font-term-list">
                   <p>通常攻撃</p>
                   <p>特殊スキル</p>
-                  <p>必殺技</p>
-                  <p>拡散攻撃</p>
-                  <p>再行動</p>
+                  <p>支援要請</p>
+                  <p>反撃連携</p>
+                  <p>星核共鳴</p>
                   <p>ターンスキップ</p>
                 </div>
               </section>
@@ -240,23 +417,10 @@ function App() {
           </div>
 
           <aside className="font-sidebar">
-            <div className="font-meta" aria-live="polite">
-              <span className="font-meta__label">現在のフォント</span>
-              <strong className="font-meta__name">{currentFont.name}</strong>
-            </div>
-
             <div className="font-filter">
-              <label className="font-filter__search">
-                <span className="font-filter__label">名前で検索</span>
-                <input
-                  type="text"
-                  value={searchText}
-                  onChange={(event) => setSearchText(event.target.value)}
-                  placeholder="例: Gothic / One"
-                />
-              </label>
+              <span className="font-filter__label">カテゴリ</span>
 
-              <div className="font-filter__chips" aria-label="用途フィルタ">
+              <div className="font-filter__chips" aria-label="フォントカテゴリ">
                 {filterOptions.map((option) => (
                   <button
                     key={option.id}
@@ -272,17 +436,6 @@ function App() {
               <p className="font-filter__result">
                 {filteredFonts.length} 件表示 / 全 {fontCandidates.length} 件
               </p>
-            </div>
-
-            <div className="font-actions">
-              <button
-                type="button"
-                className="font-switch"
-                onClick={handleNextFont}
-                disabled={filteredFonts.length === 0}
-              >
-                次のフォントへ
-              </button>
             </div>
 
             <ul className="font-list" aria-label="候補フォント一覧">
